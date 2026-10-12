@@ -34,6 +34,7 @@ Na wspólnym okresie obie tabele różnią się o co najwyżej 0,2 p.p., więc t
 | `krok5.R` | Korelacje na poziomach i różnicach, symulacja regresji pozornej |
 | `krok6.R` | Testy stacjonarności, ARIMA (auto.arima), prognoza, test Grangera |
 | `krok7.R` | Porównanie ARIMA z sezonowością i bez, ocena na 55 oknach czasowych (rolling origin) vs prognoza naiwna |
+| `krok8.R` | Składowe HICP i PPI z Eurostatu; test ARIMAX (regresory z opóźnieniem 3 mies.) na 58 oknach czasowych, test Dieboulda-Mariano |
 | `app/` | Aplikacja Shiny (`app.R` + własna kopia danych) |
 | `data/`, `wykresy/` | Dane pośrednie i wygenerowane wykresy |
 
@@ -70,6 +71,12 @@ shiny::runApp("app")
 - **Ocena na 55 oknach czasowych (od 2012):** do ok. 3 miesięcy w przód ARIMA z sezonowością
   jest wyraźnie lepsza od naiwnej prognozy (RMSE 0,67 vs 0,94), dalej już nie
   (RMSE dla h = 4–12: 2,96 vs 2,88). Wyniki zawyża szok inflacyjny z lat 2021–2023.
+- **Dodatkowe zmienne nie poprawiły prognozy w wiarygodny sposób.** Dodanie PPI, inflacji
+  bazowej lub składowych HICP (żywność, energia) do ARIMA obniża RMSE o ok. 10% (0,62 vs 0,69
+  dla h = 1–3), ale cała poprawa pochodzi z okresu po 2021 roku (przed 2020: 0,48 vs 0,48),
+  a test Dieboulda-Mariano daje p ≈ 0,1–0,2 (jedynie żywność ma p ≈ 0,02–0,04 przy 15 testach).
+  Model ze wszystkimi czterema regresorami naraz jest gorszy od bazowego (przeuczenie).
+  Wynik pokazuje, że dodatkowe dane nie wystarczają bez oceny poza próbą.
 - **Test Grangera:** nie znaleziono wiarygodnej zależności predykcyjnej między inflacją,
   bezrobociem i kursami. Jedyny istotny wynik (EUR/PLN → bezrobocie) nie jest odporny:
   znika po ograniczeniu próby do okresu od 2012 roku i prawdopodobnie wynika z przerwy
