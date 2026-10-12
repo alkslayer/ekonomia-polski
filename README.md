@@ -6,6 +6,8 @@ oraz test przyczynowości Grangera.
 
 **Aplikacja online:** https://mitek.shinyapps.io/ekonomia-polski/
 
+**Kod źródłowy:** https://github.com/alkslayer/ekonomia-polski
+
 ## Dane
 
 | Seria | Źródło | Zakres |
@@ -73,3 +75,7 @@ shiny::runApp("app")
 - Średnia miesięczna kursu wygładza szereg; do niektórych zastosowań lepszy byłby kurs z końca miesiąca.
 - Różnicowanie usuwa pozorne korelacje, ale może ukryć zależności długookresowe (kointegrację), których tu nie badano.
 - Test Grangera mierzy użyteczność predykcyjną, nie przyczynowość w sensie ekonomicznym.
+
+## Licencja
+
+MIT, zob. plik [LICENSE](LICENSE).
