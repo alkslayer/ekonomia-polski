@@ -25,6 +25,8 @@ dane_d <- dane |>
   ) |>
   drop_na()
 
+historia <- read_csv("data/prognozy_historia.csv", show_col_types = FALSE)
+
 dane_dlugie <- dane |>
   pivot_longer(-date, names_to = "seria", values_to = "wartosc") |>
   mutate(seria = factor(seria, levels = names(nazwy), labels = nazwy))
@@ -87,7 +89,10 @@ ui <- page_navbar(
         "pasma prognozy rozszerzają się z każdym miesiącem. W testach na 55 oknach czasowych",
         "(od 2012) model jest wyraźnie lepszy od założenia „inflacja zostanie taka jak dziś”",
         "tylko na horyzoncie do ok. 3 miesięcy. Dalej nie jest od niego lepszy, więc dłuższą",
-        "prognozę traktuj jako scenariusz bazowy, nie przewidywanie."
+        "prognozę traktuj jako scenariusz bazowy, nie przewidywanie.",
+        "Pasma 80% w testach obejmowały 78% obserwacji do 3 miesięcy (84% w spokojnych latach",
+        "przed 2020), ale tylko 57% dla horyzontu 7–12 miesięcy. W okresie szoku 2021–2023 pasma",
+        "były za wąskie, więc niepewność w turbulentnych czasach jest większa, niż pokazują."
       ),
       verbatimTextOutput("model_prog")
     )
@@ -118,6 +123,30 @@ ui <- page_navbar(
         "po ograniczeniu do okresu od 2012 (bez 2020) znika. Prawdopodobnie wynika z przerwy",
         "w danych o bezrobociu (skok +1,2 p.p. w styczniu 2010) i nie świadczy o realnym związku.",
         "Dla pozostałych par nie znaleziono wiarygodnej zależności."
+      )
+    )
+  ),
+
+  nav_panel(
+    "Scorecard",
+    layout_sidebar(
+      sidebar = sidebar(
+        radioButtons(
+          "sc_tryb", "Prognozy:",
+          choices = c("Na żywo (zapisane w chwili publikacji danych)" = "na_zywo",
+                      "Backtest od 2012 (liczone wstecz)" = "backtest"),
+          selected = "na_zywo"
+        ),
+        selectInput("sc_h", "Horyzont (miesiące):", choices = 1:3, selected = 1),
+        helpText("Scorecard porównuje prognozy z tym, co się naprawdę stało.",
+                 "Tylko prognozy „na żywo” są uczciwe: backtest powstał, gdy wynik był już znany.")
+      ),
+      uiOutput("sc_info"),
+      plotOutput("sc_wykres", height = "380px"),
+      tableOutput("sc_tabela"),
+      card(
+        card_header("Najnowsza prognoza na żywo"),
+        tableOutput("sc_ostatnia")
       )
     )
   ),
@@ -214,6 +243,70 @@ server <- function(input, output, session) {
       }
     )
   })
+
+  # 5. Scorecard prognoz
+  sc <- reactive({
+    historia |>
+      filter(tryb == input$sc_tryb) |>
+      left_join(select(dane, cel = date, rzeczywista = inflacja), by = "cel") |>
+      mutate(blad = rzeczywista - prognoza)
+  })
+
+  output$sc_info <- renderUI({
+    d <- sc()
+    n_zreal <- sum(!is.na(d$rzeczywista) & d$h <= 3 & d$model == "arima")
+    div(class = "alert alert-secondary",
+        sprintf("Prognoz ARIMA (h = 1–3) w tym trybie: %d, z czego zrealizowanych: %d.",
+                sum(d$h <= 3 & d$model == "arima"), n_zreal),
+        if (input$sc_tryb == "na_zywo" && n_zreal == 0) {
+          " Pierwsze prognozy na żywo zostaną ocenione po opublikowaniu danych za kolejne miesiące."
+        })
+  })
+
+  output$sc_wykres <- renderPlot({
+    d <- sc() |> filter(h == as.integer(input$sc_h), !is.na(rzeczywista))
+    validate(need(nrow(d) > 0, "Brak zrealizowanych prognoz w tym trybie. Pierwsze pojawią się po publikacji kolejnych danych."))
+
+    a <- filter(d, model == "arima")
+    ggplot(a, aes(cel)) +
+      geom_ribbon(aes(ymin = l80, ymax = u80), fill = "steelblue", alpha = 0.2) +
+      geom_line(aes(y = prognoza, color = "Prognoza ARIMA")) +
+      geom_line(data = filter(d, model == "naiwny"), aes(y = prognoza, color = "Naiwna (jak dziś)"),
+                linetype = "dashed") +
+      geom_line(aes(y = rzeczywista, color = "Rzeczywistość"), linewidth = 0.9) +
+      scale_color_manual(values = c("Prognoza ARIMA" = "steelblue", "Naiwna (jak dziś)" = "grey40",
+                                    "Rzeczywistość" = "black")) +
+      labs(x = NULL, y = "Inflacja r/r (%)", color = NULL,
+           title = sprintf("Prognoza z horyzontem %s mies. a rzeczywistość", input$sc_h),
+           subtitle = "Pasmo: przedział 80%") +
+      theme_minimal(base_size = 14) +
+      theme(legend.position = "bottom")
+  })
+
+  output$sc_tabela <- renderTable({
+    d <- sc() |> filter(h <= 3, !is.na(rzeczywista))
+    validate(need(nrow(d) > 0, "Brak zrealizowanych prognoz do oceny."))
+    d |>
+      group_by(Model = model, `Horyzont (mies.)` = as.integer(h)) |>
+      summarise(`Liczba prognoz` = n(),
+                RMSE = sqrt(mean(blad^2)),
+                MAE = mean(abs(blad)),
+                `Pokrycie 80%` = paste0(round(100 * mean(rzeczywista >= l80 & rzeczywista <= u80)), "%"),
+                .groups = "drop") |>
+      mutate(Model = recode(Model, arima = "ARIMA", naiwny = "Naiwny"))
+  }, digits = 2)
+
+  output$sc_ostatnia <- renderTable({
+    live <- filter(historia, tryb == "na_zywo")
+    validate(need(nrow(live) > 0, "Brak prognoz na żywo."))
+    ostatnia <- max(live$dane_do)
+    live |>
+      filter(dane_do == ostatnia, model == "arima", h <= 3) |>
+      transmute(`Miesiąc` = format(cel, "%m.%Y"),
+                `Prognoza (%)` = prognoza,
+                `Pasmo 80%` = sprintf("%.2f – %.2f", l80, u80),
+                `Pasmo 95%` = sprintf("%.2f – %.2f", l95, u95))
+  }, digits = 2)
 }
 
 shinyApp(ui, server)

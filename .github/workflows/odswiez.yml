@@ -30,6 +30,9 @@ jobs:
       - name: Pobierz i zwaliduj dane
         run: Rscript odswiez_dane.R
 
+      - name: Zapisz prognozę w scorecardzie
+        run: Rscript zapisz_prognoze.R     # idempotentne: dla tego samego miesiąca nie dubluje
+
       - name: Czy dane się zmieniły?
         id: zmiany
         run: |
@@ -64,6 +67,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/dane_miesieczne.rds app/data/dane_miesieczne.rds
+          git add data/dane_miesieczne.rds app/data/dane_miesieczne.rds app/data/prognozy_historia.csv
           git commit -m "Odśwież dane (automatycznie)"
           git push

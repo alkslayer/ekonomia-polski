@@ -36,6 +36,8 @@ Na wspólnym okresie obie tabele różnią się o co najwyżej 0,2 p.p., więc t
 | `krok7.R` | Porównanie ARIMA z sezonowością i bez, ocena na 55 oknach czasowych (rolling origin) vs prognoza naiwna |
 | `krok8.R` | Składowe HICP i PPI z Eurostatu; test ARIMAX (regresory z opóźnieniem 3 mies.) na 58 oknach czasowych, test Dieboulda-Mariano |
 | `krok9.R` | Porównanie średniej rocznej inflacji 2026 z ARIMA z projekcją NBP z lipca 2026 (`data/projekcje_nbp.csv`) |
+| `krok10.R` | Kalibracja pasm prognozy (pokrycie 80%/95%) i kombinacja modeli (ARIMA, ETS, Theta, naiwny) na 55 oknach |
+| `scorecard_start.R`, `zapisz_prognoze.R`, `R/prognoza.R` | Scorecard prognoz: zasilenie historią z backtestu i zapis prognozy „na żywo” przy każdym odświeżeniu danych |
 | `odswiez_dane.R` | Odświeżanie danych: pobiera Eurostat i NBP, waliduje i zapisuje tabelę dla aplikacji |
 | `R/fetch_nbp.R` | Funkcje do API NBP (wspólne dla `krok3.R` i `odswiez_dane.R`) |
 | `.github/workflows/odswiez.yml` | GitHub Actions: co miesiąc odświeża dane i wdraża aplikację |
@@ -76,6 +78,15 @@ pliki. Wymaga sekretów repozytorium: `SHINYAPPS_NAME`, `SHINYAPPS_TOKEN`, `SHIN
 
 Ręcznie: `Rscript odswiez_dane.R` z katalogu projektu.
 
+## Scorecard prognoz
+
+Zakładka **Scorecard** w aplikacji porównuje prognozy z rzeczywistością. `app/data/prognozy_historia.csv`
+ma dwa rodzaje wierszy: `backtest` (prognozy liczone wstecz od 2012, więc wszystkie „wiedzą", jak się
+skończyło) oraz `na_zywo` (prognozy zapisane w chwili publikacji danych, nigdy nie poprawiane wstecz).
+Tylko te drugie są dowodem jakości modelu. Zapisuje je `zapisz_prognoze.R`, uruchamiany w GitHub Actions
+po każdym odświeżeniu danych. Pierwsza prognoza na żywo (dane do 08.2026) zostanie oceniona po opublikowaniu
+danych za wrzesień 2026.
+
 ## Wnioski analityczne
 
 - **Korelacje na poziomach są pozorne.** Inflacja, bezrobocie i kursy mają trend, więc na poziomach
@@ -101,6 +112,16 @@ Ręcznie: `Rscript odswiez_dane.R` z katalogu projektu.
   wprost uczciwe: NBP projektuje CPI, a my mamy HICP, które w 2026 jest o ok. 0,2–0,4 p.p. wyższe,
   a liczby NBP pochodzą z prasy (nbp.pl blokuje automatyczne pobieranie), z pominięciem ścieżki
   miesięcznej i przedziałów.
+- **Kalibracja pasm prognozy:** pasma 80% ARIMA obejmują w testach 78% obserwacji dla h = 1–3,
+  70% dla h = 4–6 i 57% dla h = 7–12 (pasma 95%: 88%, 87%, 80%). W spokojnych latach przed 2020
+  są dobrze skalibrowane (84% i 94% dla h = 1–3), a w szoku 2021–23 za wąskie (63% i 77%).
+  Pasma empiryczne z historycznych błędów wypadły gorzej (62% zamiast 77%), bo przed 2021
+  błędy były małe, więc zostajemy przy pasmach modelu i opisujemy to ograniczenie w aplikacji.
+- **Kombinacja prognoz nie pomaga.** Średnia ARIMA, ETS i Theta jest gorsza od samej ARIMA
+  (RMSE 1,09 vs 0,67 dla h = 1–3), głównie przez bardzo słabą metodę Theta (2,45). Sensowniejsze
+  zestawy (ARIMA+ETS: 0,70; ARIMA+naiwny: 0,75) też nie biją samej ARIMA dla h = 1–3,
+  a lekka poprawa dla dłuższych horyzontów (3,19 vs 3,45 dla h = 7–12) nie jest testowana
+  statystycznie.
 - **Test Grangera:** nie znaleziono wiarygodnej zależności predykcyjnej między inflacją,
   bezrobociem i kursami. Jedyny istotny wynik (EUR/PLN → bezrobocie) nie jest odporny:
   znika po ograniczeniu próby do okresu od 2012 roku i prawdopodobnie wynika z przerwy
