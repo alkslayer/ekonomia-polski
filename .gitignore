@@ -1,0 +1,17 @@
+# R / RStudio
+.Rproj.user/
+.Rhistory
+.RData
+*.RData
+.Ruserdata
+Rplots.pdf
+
+# macOS
+.DS_Store
+
+# Dane wdrożeniowe shinyapps.io
+app/rsconnect/
+rsconnect/
+
+# Notatki robocze (nie do publikacji)
+CLAUDE.md
