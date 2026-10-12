@@ -17,7 +17,7 @@ oraz test przyczynowości Grangera.
 | EUR/PLN, USD/PLN (średnia miesięczna z kursów średnich) | NBP, tabela A | 01.2002 – 08.2026 |
 
 Tabela końcowa (`data/dane_miesieczne.rds`) obejmuje wspólny okres **01.2002 – 08.2026**
-(296 miesięcy, bez braków). Dane pochodzą z dnia 12.10.2026 i są w repozytorium statyczne.
+(296 miesięcy, bez braków; stan na 12.10.2026). Dane są odświeżane automatycznie, zob. niżej.
 
 Uwaga o inflacji: od danych za 01.2026 Eurostat przeszedł na klasyfikację ECOICOP v2,
 więc używana jest nowa tabela `prc_hicp_minr` (stara `prc_hicp_manr` jest zarchiwizowana).
@@ -35,6 +35,9 @@ Na wspólnym okresie obie tabele różnią się o co najwyżej 0,2 p.p., więc t
 | `krok6.R` | Testy stacjonarności, ARIMA (auto.arima), prognoza, test Grangera |
 | `krok7.R` | Porównanie ARIMA z sezonowością i bez, ocena na 55 oknach czasowych (rolling origin) vs prognoza naiwna |
 | `krok8.R` | Składowe HICP i PPI z Eurostatu; test ARIMAX (regresory z opóźnieniem 3 mies.) na 58 oknach czasowych, test Dieboulda-Mariano |
+| `odswiez_dane.R` | Odświeżanie danych: pobiera Eurostat i NBP, waliduje i zapisuje tabelę dla aplikacji |
+| `R/fetch_nbp.R` | Funkcje do API NBP (wspólne dla `krok3.R` i `odswiez_dane.R`) |
+| `.github/workflows/odswiez.yml` | GitHub Actions: co miesiąc odświeża dane i wdraża aplikację |
 | `app/` | Aplikacja Shiny (`app.R` + własna kopia danych) |
 | `data/`, `wykresy/` | Dane pośrednie i wygenerowane wykresy |
 
@@ -57,6 +60,20 @@ Sama aplikacja (bez pobierania danych):
 ```r
 shiny::runApp("app")
 ```
+
+## Automatyczne odświeżanie danych
+
+`odswiez_dane.R` pobiera inflację i bezrobocie z Eurostatu oraz kursy z NBP, składa tabelę
+miesięczną i **waliduje** ją (brak NA i luk, sensowne zakresy, tabela nie może być krótsza
+ani kończyć się wcześniej niż poprzednia). Przy błędzie walidacji skrypt zatrzymuje się
+i nic nie jest wdrażane.
+
+Workflow `.github/workflows/odswiez.yml` uruchamia go 20. dnia każdego miesiąca (oraz ręcznie
+z zakładki Actions). Jeśli dane się zmieniły, wdraża aplikację na shinyapps.io i commituje nowe
+pliki. Wymaga sekretów repozytorium: `SHINYAPPS_NAME`, `SHINYAPPS_TOKEN`, `SHINYAPPS_SECRET`
+(Settings → Secrets and variables → Actions).
+
+Ręcznie: `Rscript odswiez_dane.R` z katalogu projektu.
 
 ## Wnioski analityczne
 
@@ -84,7 +101,8 @@ shiny::runApp("app")
 
 ## Ograniczenia
 
-- Dane w aplikacji są migawką; nie odświeżają się automatycznie.
+- Dane odświeżają się raz w miesiącu (po publikacji Eurostatu); kursy NBP są dla miesiąca bieżącego pomijane do czasu, aż będzie ich co najmniej 15.
+- Analizy z `krok5.R`–`krok8.R` i wnioski w tym README dotyczą danych z 12.10.2026 i nie aktualizują się same.
 - Średnia miesięczna kursu wygładza szereg; do niektórych zastosowań lepszy byłby kurs z końca miesiąca.
 - Różnicowanie usuwa pozorne korelacje, ale może ukryć zależności długookresowe (kointegrację), których tu nie badano.
 - Test Grangera mierzy użyteczność predykcyjną, nie przyczynowość w sensie ekonomicznym.

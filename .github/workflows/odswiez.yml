@@ -1,0 +1,69 @@
+name: Odśwież dane i wdróż aplikację
+
+on:
+  schedule:
+    - cron: "0 7 20 * *"     # 20. dnia każdego miesiąca, 07:00 UTC (po publikacji danych Eurostatu)
+  workflow_dispatch:         # ręczne uruchomienie z zakładki Actions
+
+permissions:
+  contents: write            # żeby zacommitować nowe dane
+
+concurrency:
+  group: odswiez
+  cancel-in-progress: false
+
+jobs:
+  odswiez:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true     # gotowe binaria pakietów, szybka instalacja
+
+      - name: Zainstaluj pakiety R
+        run: |
+          Rscript -e 'install.packages(c("tidyverse", "eurostat", "httr2", "forecast", "lmtest", "shiny", "bslib", "rsconnect"))'
+
+      - name: Pobierz i zwaliduj dane
+        run: Rscript odswiez_dane.R
+
+      - name: Czy dane się zmieniły?
+        id: zmiany
+        run: |
+          if [ -n "$(git status --porcelain data app/data)" ]; then
+            echo "zmienione=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "zmienione=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Wdróż aplikację na shinyapps.io
+        if: steps.zmiany.outputs.zmienione == 'true'
+        env:
+          SHINYAPPS_NAME: ${{ secrets.SHINYAPPS_NAME }}
+          SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
+          SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
+        run: |
+          Rscript -e '
+            rsconnect::setAccountInfo(
+              name   = Sys.getenv("SHINYAPPS_NAME"),
+              token  = Sys.getenv("SHINYAPPS_TOKEN"),
+              secret = Sys.getenv("SHINYAPPS_SECRET")
+            )
+            rsconnect::deployApp(
+              "app",
+              appName     = "ekonomia-polski",
+              account     = Sys.getenv("SHINYAPPS_NAME"),
+              forceUpdate = TRUE
+            )'
+
+      - name: Zacommituj nowe dane
+        if: steps.zmiany.outputs.zmienione == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/dane_miesieczne.rds app/data/dane_miesieczne.rds
+          git commit -m "Odśwież dane (automatycznie)"
+          git push

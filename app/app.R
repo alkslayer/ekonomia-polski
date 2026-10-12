@@ -120,7 +120,11 @@ ui <- page_navbar(
         "Dla pozostałych par nie znaleziono wiarygodnej zależności."
       )
     )
-  )
+  ),
+
+  nav_spacer(),
+  nav_item(span(class = "navbar-text small",
+                paste0("Dane do: ", format(max(dane$date), "%m.%Y"))))
 )
 
 # ---- Serwer -----------------------------------------------------------------
