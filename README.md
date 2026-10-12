@@ -35,6 +35,7 @@ Na wspólnym okresie obie tabele różnią się o co najwyżej 0,2 p.p., więc t
 | `krok6.R` | Testy stacjonarności, ARIMA (auto.arima), prognoza, test Grangera |
 | `krok7.R` | Porównanie ARIMA z sezonowością i bez, ocena na 55 oknach czasowych (rolling origin) vs prognoza naiwna |
 | `krok8.R` | Składowe HICP i PPI z Eurostatu; test ARIMAX (regresory z opóźnieniem 3 mies.) na 58 oknach czasowych, test Dieboulda-Mariano |
+| `krok9.R` | Porównanie średniej rocznej inflacji 2026 z ARIMA z projekcją NBP z lipca 2026 (`data/projekcje_nbp.csv`) |
 | `odswiez_dane.R` | Odświeżanie danych: pobiera Eurostat i NBP, waliduje i zapisuje tabelę dla aplikacji |
 | `R/fetch_nbp.R` | Funkcje do API NBP (wspólne dla `krok3.R` i `odswiez_dane.R`) |
 | `.github/workflows/odswiez.yml` | GitHub Actions: co miesiąc odświeża dane i wdraża aplikację |
@@ -94,6 +95,12 @@ Ręcznie: `Rscript odswiez_dane.R` z katalogu projektu.
   a test Dieboulda-Mariano daje p ≈ 0,1–0,2 (jedynie żywność ma p ≈ 0,02–0,04 przy 15 testach).
   Model ze wszystkimi czterema regresorami naraz jest gorszy od bazowego (przeuczenie).
   Wynik pokazuje, że dodatkowe dane nie wystarczają bez oceny poza próbą.
+- **Porównanie z projekcją NBP (lipiec 2026, CPI 2,9% w 2026):** średnia roczna 2026 implikowana
+  przez ARIMA zmienia się z każdym nowym miesiącem danych (2,68–3,34% dla danych do maja–sierpnia),
+  co pokazuje, że dłuższych prognoz modelu nie należy traktować poważnie. Porównanie nie jest
+  wprost uczciwe: NBP projektuje CPI, a my mamy HICP, które w 2026 jest o ok. 0,2–0,4 p.p. wyższe,
+  a liczby NBP pochodzą z prasy (nbp.pl blokuje automatyczne pobieranie), z pominięciem ścieżki
+  miesięcznej i przedziałów.
 - **Test Grangera:** nie znaleziono wiarygodnej zależności predykcyjnej między inflacją,
   bezrobociem i kursami. Jedyny istotny wynik (EUR/PLN → bezrobocie) nie jest odporny:
   znika po ograniczeniu próby do okresu od 2012 roku i prawdopodobnie wynika z przerwy
