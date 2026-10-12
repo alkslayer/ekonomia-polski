@@ -11,12 +11,13 @@ dane_d <- readRDS("data/dane_roznice.rds")
 #    Uwaga: adf.test ma wbudowany wybór liczby opóźnień; wyniki są orientacyjne.
 adf_p <- \(x) suppressWarnings(adf.test(x)$p.value)
 
+seria_poziom  <- c("inflacja", "bezrobocie", "eur_pln", "usd_pln")
+seria_roznica <- c("d_inflacja", "d_bezrobocie", "r_eur", "r_usd")   # w tej samej kolejności
+
 tibble(
-  seria = c("inflacja", "bezrobocie", "eur_pln", "usd_pln"),
-  p_poziom  = c(adf_p(dane$inflacja), adf_p(dane$bezrobocie),
-                adf_p(dane$eur_pln),  adf_p(dane$usd_pln)),
-  p_roznica = c(adf_p(dane_d$d_inflacja), adf_p(dane_d$d_bezrobocie),
-                adf_p(dane_d$r_eur),      adf_p(dane_d$r_usd))
+  seria     = seria_poziom,
+  p_poziom  = map_dbl(seria_poziom,  \(s) adf_p(dane[[s]])),
+  p_roznica = map_dbl(seria_roznica, \(s) adf_p(dane_d[[s]]))
 ) |>
   mutate(across(where(is.numeric), \(x) round(x, 3)))
 

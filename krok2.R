@@ -7,36 +7,33 @@ infl <- readRDS("data/infl_clean.rds")
 glimpse(infl)
 range(infl$date)
 
-# 3. Wykres bazowy: cała historia
-p_all <- ggplot(infl, aes(x = date, y = inflacja)) +
-  geom_line(color = "steelblue", linewidth = 0.8) +
-  geom_hline(yintercept = 2.5, linetype = "dashed", color = "firebrick") +
-  labs(
-    title    = "Inflacja HICP w Polsce, 1997-2026",
-    subtitle = "Roczna zmiana %; linia przerywana = cel NBP (2,5%)",
-    x        = NULL,
-    y        = "Inflacja r/r (%)",
-    caption  = "Źródło: Eurostat, prc_hicp_minr"
-  ) +
-  theme_minimal()
+# 3. Funkcja rysująca wykres inflacji z linią celu NBP.
+#    `od` (opcjonalnie) ogranicza dane do okresu od podanej daty; reszta jest wspólna,
+#    więc obie wersje wykresu różnią się tylko danymi i tytułem.
+wykres_inflacji <- function(dane, tytul, od = NULL, cel = 2.5) {
+  if (!is.null(od)) {
+    dane <- filter(dane, date >= as.Date(od))
+  }
+
+  ggplot(dane, aes(x = date, y = inflacja)) +
+    geom_line(color = "steelblue", linewidth = 0.8) +
+    geom_hline(yintercept = cel, linetype = "dashed", color = "firebrick") +
+    labs(
+      title    = tytul,
+      subtitle = sprintf("Roczna zmiana %%; linia przerywana = cel NBP (%s%%)",
+                         format(cel, decimal.mark = ",")),
+      x        = NULL,
+      y        = "Inflacja r/r (%)",
+      caption  = "Źródło: Eurostat, prc_hicp_minr"
+    ) +
+    theme_minimal()
+}
+
+# 4. Dwie wersje wykresu
+p_all  <- wykres_inflacji(infl, "Inflacja HICP w Polsce, 1997-2026")
+p_2010 <- wykres_inflacji(infl, "Inflacja HICP w Polsce od 2010 roku", od = "2010-01-01")
 
 p_all
-
-# 4. Wersja od 2010: filtrujemy dane, reszta kodu ta sama
-p_2010 <- infl |>
-  filter(date >= as.Date("2010-01-01")) |>
-  ggplot(aes(x = date, y = inflacja)) +
-  geom_line(color = "steelblue", linewidth = 0.8) +
-  geom_hline(yintercept = 2.5, linetype = "dashed", color = "firebrick") +
-  labs(
-    title    = "Inflacja HICP w Polsce od 2010 roku",
-    subtitle = "Roczna zmiana %; linia przerywana = cel NBP (2,5%)",
-    x        = NULL,
-    y        = "Inflacja r/r (%)",
-    caption  = "Źródło: Eurostat, prc_hicp_minr"
-  ) +
-  theme_minimal()
-
 p_2010
 
 # 5. Zapis do plików
