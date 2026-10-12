@@ -77,17 +77,17 @@ ui <- page_navbar(
     layout_sidebar(
       sidebar = sidebar(
         selectInput("prog_seria", "Szereg:", choices = setNames(names(nazwy), nazwy)),
-        sliderInput("prog_h", "Horyzont (miesiące):", min = 3, max = 24, value = 12),
+        sliderInput("prog_h", "Horyzont (miesiące):", min = 3, max = 24, value = 3),
         helpText("Model dobiera automatycznie auto.arima(). Pasma: 80% i 95%.")
       ),
       plotOutput("wykres_prog", height = "460px"),
       div(
         class = "alert alert-warning",
         strong("Uwaga: "),
-        "pasma prognozy rozszerzają się z każdym miesiącem. Dalej niż kilka miesięcy w przód",
-        "model niewiele wie. Prognozę traktuj jako scenariusz bazowy, nie przewidywanie.",
-        "Na ostatnich 12 miesiącach model był tylko nieznacznie lepszy od naiwnej prognozy",
-        "„jak dziś”."
+        "pasma prognozy rozszerzają się z każdym miesiącem. W testach na 55 oknach czasowych",
+        "(od 2012) model jest wyraźnie lepszy od założenia „inflacja zostanie taka jak dziś”",
+        "tylko na horyzoncie do ok. 3 miesięcy. Dalej nie jest od niego lepszy, więc dłuższą",
+        "prognozę traktuj jako scenariusz bazowy, nie przewidywanie."
       ),
       verbatimTextOutput("model_prog")
     )

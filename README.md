@@ -33,6 +33,7 @@ Na wspólnym okresie obie tabele różnią się o co najwyżej 0,2 p.p., więc t
 | `krok4.R` | Bezrobocie z Eurostatu, agregacja kursów do miesięcy, łączenie w jedną tabelę |
 | `krok5.R` | Korelacje na poziomach i różnicach, symulacja regresji pozornej |
 | `krok6.R` | Testy stacjonarności, ARIMA (auto.arima), prognoza, test Grangera |
+| `krok7.R` | Porównanie ARIMA z sezonowością i bez, ocena na 55 oknach czasowych (rolling origin) vs prognoza naiwna |
 | `app/` | Aplikacja Shiny (`app.R` + własna kopia danych) |
 | `data/`, `wykresy/` | Dane pośrednie i wygenerowane wykresy |
 
@@ -64,6 +65,11 @@ shiny::runApp("app")
 - **ARIMA dla inflacji:** auto.arima wybiera ARIMA(1,1,1)(1,0,2)[12]. Na ostatnich 12 miesiącach
   RMSE modelu (0,33) jest tylko nieznacznie lepsze niż naiwnej prognozy „jak dziś” (0,37).
   Pasma prognozy szybko się rozszerzają.
+- **Składnik sezonowy jest potrzebny.** ARIMA bez sezonowości ma dużo gorsze AICc (357 vs 238)
+  i reszty, które nie są białym szumem (Ljung-Box p ≈ 4·10⁻⁹).
+- **Ocena na 55 oknach czasowych (od 2012):** do ok. 3 miesięcy w przód ARIMA z sezonowością
+  jest wyraźnie lepsza od naiwnej prognozy (RMSE 0,67 vs 0,94), dalej już nie
+  (RMSE dla h = 4–12: 2,96 vs 2,88). Wyniki zawyża szok inflacyjny z lat 2021–2023.
 - **Test Grangera:** nie znaleziono wiarygodnej zależności predykcyjnej między inflacją,
   bezrobociem i kursami. Jedyny istotny wynik (EUR/PLN → bezrobocie) nie jest odporny:
   znika po ograniczeniu próby do okresu od 2012 roku i prawdopodobnie wynika z przerwy
